@@ -55,8 +55,8 @@ def create_app():
     from blueprints.auth import auth_bp
     app.register_blueprint(auth_bp)
     
-    # from blueprints.admin import admin_bp
-    # app.register_blueprint(admin_bp)
+    from blueprints.admin import admin_bp
+    app.register_blueprint(admin_bp)
     
     # from blueprints.buscadores import buscadores_bp
     # app.register_blueprint(buscadores_bp)

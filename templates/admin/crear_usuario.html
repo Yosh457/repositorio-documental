@@ -2,11 +2,11 @@
 {% block title %}Crear Nuevo Usuario{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto my-12 bg-white p-8 rounded-xl shadow-lg">
+<div class="max-w-5xl mx-auto my-12 bg-white p-8 rounded-xl shadow-lg">
     
     <div class="border-b pb-4 mb-8">
         <h2 class="text-2xl font-bold text-gray-800">Crear Nuevo Usuario</h2>
-        <p class="text-gray-500 text-sm mt-1">Registra un nuevo administrador, referente o visualizador para el sistema.</p>
+        <p class="text-gray-500 text-sm mt-1">Registra un nuevo funcionario y asigna sus permisos de búsqueda documental.</p>
     </div>
 
     <form method="post" class="space-y-8">
@@ -16,58 +16,90 @@
             <div class="space-y-6">
                 <div>
                     <label for="nombre_completo" class="block text-sm font-bold text-gray-700 mb-1">Nombre Completo</label>
-                    <input type="text" name="nombre_completo" id="nombre_completo" 
+                    <input type="text" name="nombre_completo" id="nombre_completo"
                            value="{{ datos_previos.nombre_completo if datos_previos else '' }}"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
                            placeholder="Ej: Juan Pérez" required>
                 </div>
+
                 <div>
                     <label for="email" class="block text-sm font-bold text-gray-700 mb-1">Correo Electrónico</label>
-                    <input type="email" name="email" id="email" 
+                    <input type="email" name="email" id="email"
                            value="{{ datos_previos.email if datos_previos else '' }}"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
                            placeholder="usuario@saludmaho.cl" required>
-                </div>
-            </div>
-
-            <div class="space-y-6">
-                <div>
-                    <label for="rol_id" class="block text-sm font-bold text-gray-700 mb-1">Rol de Sistema</label>
-                    <select name="rol_id" id="rol_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white" required>
-                        <option value="" disabled {% if not datos_previos %}selected{% endif %}>Selecciona un rol</option>
-                        {% for rol in roles %}
-                            <option value="{{ rol.id }}" {% if datos_previos and datos_previos.rol_id == rol.id %}selected{% endif %}>
-                                {{ rol.nombre }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                {# --- NUEVO: SELECT DE CICLO VITAL (Lógica RedProtege) --- #}
-                <div>
-                    <label for="ciclo_id" class="block text-sm font-bold text-gray-700 mb-1">Ciclo Vital Asignado</label>
-                    <select name="ciclo_id" id="ciclo_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
-                        <option value="">-- Ninguno (Vista Global / Admin) --</option>
-                        {% for ciclo in ciclos %}
-                            <option value="{{ ciclo.id }}">{{ ciclo.nombre }} ({{ ciclo.rango_descripcion }})</option>
-                        {% endfor %}
-                    </select>
-                    <p class="text-xs text-gray-500 mt-1">Obligatorio si el rol es 'Referente'.</p>
                 </div>
 
                 <div>
                     <label for="password" class="block text-sm font-bold text-gray-700 mb-1">Contraseña Provisional</label>
-                    <input type="password" name="password" id="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" required>
+                    <input type="password" name="password" id="password"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+                           required>
                 </div>
 
-                {# --- CHECKBOX CORREGIDO (Estilo Repositorio Dirección) --- #}
                 <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 flex items-start gap-3">
                     <div class="flex items-center h-5">
-                        <input type="checkbox" name="forzar_cambio_clave" value="1" id="forzar_cambio_clave" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <input type="checkbox"
+                               name="forzar_cambio_clave"
+                               value="1"
+                               id="forzar_cambio_clave"
+                               class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                               {% if not datos_previos or datos_previos.get('forzar_cambio_clave') == '1' %}checked{% endif %}>
                     </div>
                     <div class="text-sm">
                         <label for="forzar_cambio_clave" class="font-bold text-gray-700 cursor-pointer select-none">Forzar cambio de contraseña</label>
-                        <p class="text-gray-500 text-xs mt-1">El usuario deberá cambiar su clave obligatoriamente al iniciar sesión por primera vez.</p>
+                        <p class="text-gray-500 text-xs mt-1">Recomendado. El usuario deberá cambiar su clave al iniciar sesión por primera vez.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="rol_id" class="block text-sm font-bold text-gray-700 mb-1">Nivel de Acceso</label>
+                        <select name="rol_id" id="rol_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white" required>
+                            <option value="" disabled {% if not datos_previos or not datos_previos.get('rol_id') %}selected{% endif %}>Selecciona un rol</option>
+                            {% for rol in roles %}
+                                <option value="{{ rol.id }}"
+                                    {% if datos_previos and datos_previos.get('rol_id') == rol.id|string %}selected{% endif %}>
+                                    {{ rol.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="profesion_id" class="block text-sm font-bold text-gray-700 mb-1">Perfil (Profesión)</label>
+                        <select name="profesion_id" id="profesion_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                            <option value="">-- Ninguno --</option>
+                            {% for profesion in profesiones %}
+                                <option value="{{ profesion.id }}"
+                                    {% if datos_previos and datos_previos.get('profesion_id') == profesion.id|string %}selected{% endif %}>
+                                    {{ profesion.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                {# BLOQUE DE PERMISOS GRANULARES #}
+                <div class="border border-gray-200 rounded-xl p-5 bg-gray-50">
+                    <h3 class="text-sm font-bold text-gray-800 mb-1">Permisos de Búsqueda Documental</h3>
+                    <p class="text-xs text-gray-500 mb-4">Selecciona los catálogos a los que este usuario tendrá acceso.</p>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-2">
+                        {% for buscador in buscadores %}
+                        <label class="flex items-center space-x-3 bg-white p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition shadow-sm">
+                            <input type="checkbox"
+                                   name="buscadores"
+                                   value="{{ buscador.id }}"
+                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                   {% if datos_previos and buscador.id|string in datos_previos.getlist('buscadores') %}checked{% endif %}>
+                            <span class="text-sm font-medium text-gray-700">{{ buscador.nombre }}</span>
+                        </label>
+                        {% else %}
+                        <p class="text-sm text-red-500 col-span-2">No hay buscadores configurados en el sistema.</p>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -75,7 +107,7 @@
 
         <div class="flex justify-end gap-4 pt-6 border-t border-gray-100 mt-8">
             <a href="{{ url_for('admin.panel') }}" class="px-6 py-2 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition">Cancelar</a>
-            <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition transform hover:-translate-y-0.5">Crear Usuario</button>
+            <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition">Crear Usuario</button>
         </div>
     </form>
 </div>

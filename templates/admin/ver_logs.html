@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Logs de Auditoría{% endblock %}
+{% block title %}Logs del Sistema{% endblock %}
 {% from '_macros.html' import render_pagination %}
 
 {% block content %}
@@ -7,15 +7,15 @@
     
     <div class="flex justify-between items-center mb-8 border-b pb-4">
         <div>
-            <h2 class="text-2xl font-bold text-gray-800">Logs de Auditoría</h2>
-            <p class="text-gray-500 text-sm">Registro histórico de movimientos del sistema.</p>
+            <h2 class="text-2xl font-bold text-gray-800">Logs del Sistema</h2>
+            <p class="text-gray-500 text-sm">Registro histórico de accesos y movimientos del sistema.</p>
         </div>
         <a href="{{ url_for('admin.panel') }}" class="btn btn-secondary">
             &larr; Volver al Panel
         </a>
     </div>
 
-    <form method="get" action="{{ url_for('admin.ver_logs') }}" class="bg-gray-50 p-6 rounded-lg mb-8 grid grid-cols-1 md:grid-cols-3 gap-6 items-end border border-gray-200">
+    <form method="get" action="{{ url_for('admin.ver_logs_sistema') }}" class="bg-gray-50 p-6 rounded-lg mb-8 grid grid-cols-1 md:grid-cols-3 gap-6 items-end border border-gray-200">
         
         <div>
             <label for="filtro_usuario" class="block text-xs font-bold text-gray-500 uppercase mb-1">Filtrar por Usuario</label>
@@ -42,7 +42,7 @@
         </div>
 
         <div class="flex gap-2">
-            <a href="{{ url_for('admin.ver_logs') }}" class="w-1/2 px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg text-center hover:bg-gray-300 transition">Limpiar</a>
+            <a href="{{ url_for('admin.ver_logs_sistema') }}" class="w-1/2 px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg text-center hover:bg-gray-300 transition">Limpiar</a>
             <button type="submit" class="w-1/2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition">Filtrar</button>
         </div>
     </form>
@@ -86,6 +86,6 @@
         </table>
     </div>
 
-    {{ render_pagination(pagination, 'admin.ver_logs') }}
+    {{ render_pagination(pagination, 'admin.ver_logs_sistema') }}
 </div>
 {% endblock %}
