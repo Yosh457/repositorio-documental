@@ -58,8 +58,8 @@ def create_app():
     from blueprints.admin import admin_bp
     app.register_blueprint(admin_bp)
     
-    # from blueprints.buscadores import buscadores_bp
-    # app.register_blueprint(buscadores_bp)
+    from blueprints.buscadores import buscadores_bp
+    app.register_blueprint(buscadores_bp)
 
     # Ruta raíz redirige al login
     @app.route('/')

@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import or_
 
 # Modelos (Nuestra nueva estructura de base de datos)
-from models import db, Usuario, RolAplicacion, Profesion, Buscador, LogSistema
+from models import db, Usuario, RolAplicacion, Profesion, Buscador, LogSistema, LogAuditoriaDocumental
 # Utilidades (Importamos las que ya limpiamos en el Paso 3)
 from utils import registrar_log_sistema, admin_required, enviar_credenciales_nuevo_usuario
 
@@ -234,3 +234,41 @@ def ver_logs_sistema():
                            todos_los_usuarios=todos_los_usuarios,
                            acciones_posibles=acciones_unicas,
                            filtros={'usuario_id': usuario_filtro, 'accion': accion_filtro})
+
+@admin_bp.route('/auditoria_documental')
+def ver_auditoria_documental():
+    """
+    Muestra el historial de trazabilidad documental.
+    Permite auditar búsquedas (con sus motivos) y visualizaciones exactas de PDFs.
+    """
+    page = request.args.get('page', 1, type=int)
+    usuario_filtro = request.args.get('usuario_id')
+    buscador_filtro = request.args.get('buscador_id')
+    evento_filtro = request.args.get('tipo_evento')
+
+    query = LogAuditoriaDocumental.query.order_by(LogAuditoriaDocumental.timestamp.desc())
+
+    # Aplicamos filtros si existen
+    if usuario_filtro and usuario_filtro.isdigit():
+        query = query.filter(LogAuditoriaDocumental.usuario_id == int(usuario_filtro))
+    if buscador_filtro and buscador_filtro.isdigit():
+        query = query.filter(LogAuditoriaDocumental.buscador_id == int(buscador_filtro))
+    if evento_filtro in ['BUSQUEDA', 'VISUALIZACION']:
+        query = query.filter(LogAuditoriaDocumental.tipo_evento == evento_filtro)
+
+    pagination = query.paginate(page=page, per_page=15, error_out=False)
+    
+    todos_los_usuarios = Usuario.query.order_by(Usuario.nombre_completo).all()
+    todos_los_buscadores = Buscador.query.order_by(Buscador.nombre).all()
+    tipos_evento = ['BUSQUEDA', 'VISUALIZACION']
+
+    return render_template('admin/ver_auditoria.html', 
+                           pagination=pagination,
+                           todos_los_usuarios=todos_los_usuarios,
+                           todos_los_buscadores=todos_los_buscadores,
+                           tipos_evento=tipos_evento,
+                           filtros={
+                               'usuario_id': usuario_filtro, 
+                               'buscador_id': buscador_filtro,
+                               'tipo_evento': evento_filtro
+                           })

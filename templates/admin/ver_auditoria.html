@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Auditoría Documental{% endblock %}
+{% from '_macros.html' import render_pagination %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto my-12 bg-white p-8 rounded-xl shadow-lg">
+    
+    <div class="flex justify-between items-center mb-8 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Auditoría Documental</h2>
+            <p class="text-gray-500 text-sm">Trazabilidad estricta de búsquedas y visualización de documentos.</p>
+        </div>
+        <a href="{{ url_for('admin.panel') }}" class="btn btn-secondary">
+            &larr; Volver al Panel
+        </a>
+    </div>
+
+    {# --- FORMULARIO DE FILTROS --- #}
+    <form method="get" action="{{ url_for('admin.ver_auditoria_documental') }}" class="bg-gray-50 p-6 rounded-lg mb-8 grid grid-cols-1 md:grid-cols-4 gap-4 items-end border border-gray-200">
+        
+        <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Usuario</label>
+            <select name="usuario_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white text-sm">
+                <option value="">Todos los usuarios</option>
+                {% for user in todos_los_usuarios %}
+                    <option value="{{ user.id }}" {% if filtros.usuario_id and user.id == filtros.usuario_id|int %}selected{% endif %}>
+                        {{ user.nombre_completo }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Catálogo</label>
+            <select name="buscador_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white text-sm">
+                <option value="">Todos los catálogos</option>
+                {% for buscador in todos_los_buscadores %}
+                    <option value="{{ buscador.id }}" {% if filtros.buscador_id and buscador.id == filtros.buscador_id|int %}selected{% endif %}>
+                        {{ buscador.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Evento</label>
+            <select name="tipo_evento" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white text-sm">
+                <option value="">Ambos</option>
+                {% for evento in tipos_evento %}
+                    <option value="{{ evento }}" {% if evento == filtros.tipo_evento %}selected{% endif %}>
+                        {{ evento }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="flex gap-2">
+            <a href="{{ url_for('admin.ver_auditoria_documental') }}" class="w-1/3 px-3 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg text-center hover:bg-gray-300 transition text-sm">Limpiar</a>
+            <button type="submit" class="w-2/3 px-3 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition text-sm">Filtrar</button>
+        </div>
+    </form>
+
+    {# --- TABLA DE AUDITORÍA --- #}
+    <div class="overflow-x-auto rounded-lg border border-gray-200">
+        <table class="min-w-full bg-white">
+            <thead class="bg-gray-100 border-b border-gray-200">
+                <tr>
+                    <th class="text-left py-3 px-4 font-bold text-xs text-gray-500 uppercase tracking-wider">Fecha / Usuario</th>
+                    <th class="text-left py-3 px-4 font-bold text-xs text-gray-500 uppercase tracking-wider">Catálogo / Evento</th>
+                    <th class="text-left py-3 px-4 font-bold text-xs text-gray-500 uppercase tracking-wider">Detalles de la Operación</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for log in pagination.items %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="py-3 px-4 whitespace-nowrap">
+                        <div class="text-xs text-gray-500">{{ log.timestamp.strftime('%d-%m-%Y %H:%M:%S') }}</div>
+                        <div class="text-sm font-semibold text-gray-900">{{ log.usuario.nombre_completo if log.usuario else 'Usuario Eliminado' }}</div>
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="text-sm text-gray-700 font-medium mb-1">{{ log.buscador.nombre if log.buscador else 'Catálogo Eliminado' }}</div>
+                        {% if log.tipo_evento == 'BUSQUEDA' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">BÚSQUEDA</span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">VISUALIZACIÓN</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-4">
+                        {% if log.tipo_evento == 'BUSQUEDA' %}
+                            <div class="text-sm">
+                                <span class="font-semibold text-gray-700">Término:</span> <span class="text-gray-600">{{ log.termino_busqueda }}</span>
+                                <span class="mx-2 text-gray-300">|</span>
+                                <span class="font-semibold text-gray-700">Resultados:</span> <span class="text-gray-600">{{ log.cantidad_resultados }}</span>
+                            </div>
+                            <div class="text-xs mt-1 bg-gray-100 p-2 rounded text-gray-700 border border-gray-200">
+                                <span class="font-semibold">Motivo:</span> {{ log.motivo }}
+                            </div>
+                        {% else %}
+                            <div class="text-sm">
+                                <span class="font-semibold text-gray-700">Archivo:</span> 
+                                <span class="text-blue-600 font-medium">{{ log.documento.nombre_archivo if log.documento else 'Documento no disponible' }}</span>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">ID Interno: {{ log.documento_id }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" class="text-center py-10 text-gray-500 bg-gray-50">
+                        No hay registros de auditoría que coincidan con los filtros.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {{ render_pagination(pagination, 'admin.ver_auditoria_documental') }}
+</div>
+{% endblock %}
