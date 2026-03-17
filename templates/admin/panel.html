@@ -65,7 +65,8 @@
                         <th class="py-3 px-4 text-left text-sm font-semibold">Usuario</th>
                         <th class="py-3 px-4 text-left text-sm font-semibold">Rol (Acceso)</th>
                         <th class="py-3 px-4 text-left text-sm font-semibold">Perfil</th>
-                        <th class="py-3 px-4 text-left text-sm font-semibold">Permisos</th>
+                        <th class="py-3 px-4 text-center text-sm font-semibold">Estado</th>
+                        <th class="py-3 px-4 text-center text-sm font-semibold">Permisos</th>
                         <th class="py-3 px-4 text-center text-sm font-semibold">Acciones</th>
                     </tr>
                 </thead>
@@ -82,16 +83,23 @@
                         <td class="py-3 px-4 text-sm text-gray-600">
                             {{ usuario.profesion.nombre if usuario.profesion else 'Sin especificar' }}
                         </td>
-                        <td class="py-3 px-4">
+                        <td class="py-3 px-4 text-center">
+                            {% if usuario.activo %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Activo</span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4 text-center">
                             <span class="text-xs font-semibold text-gray-500 bg-gray-200 px-2 py-1 rounded-full">
                                 {{ usuario.buscadores_permitidos|length }} Buscadores
                             </span>
                         </td>
                         <td class="py-3 px-4 text-center flex justify-center gap-2">
-                            <a href="{{ url_for('admin.editar_usuario', id=usuario.id) }}" class="btn btn-secondary text-xs">Editar</a>
-                            <form action="{{ url_for('admin.toggle_activo', id=usuario.id) }}" method="POST">
+                            <a href="{{ url_for('admin.editar_usuario', id=usuario.id) }}" class="btn btn-secondary text-xs flex items-center justify-center">Editar</a>
+                            <form action="{{ url_for('admin.toggle_activo', id=usuario.id) }}" method="POST" class="inline m-0">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                <button type="submit" class="btn {% if usuario.activo %}btn-warning{% else %}btn-primary{% endif %} text-xs">
+                                <button type="submit" class="btn {% if usuario.activo %}btn-warning{% else %}btn-primary{% endif %} text-xs w-20 flex justify-center items-center">
                                     {{ 'Bloquear' if usuario.activo else 'Activar' }}
                                 </button>
                             </form>
@@ -99,7 +107,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" class="text-center py-8 text-gray-500">No se encontraron usuarios.</td>
+                        <td colspan="6" class="text-center py-8 text-gray-500">No se encontraron usuarios.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

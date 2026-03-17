@@ -124,4 +124,5 @@ def visor(documento_id):
 
     # 6. Servir el documento directamente al lector PDF del navegador
     # as_attachment=False obliga al navegador a intentar mostrarlo en vez de descargarlo
-    return send_file(ruta_fisica, as_attachment=False)
+    # download_name sugiere al navegador el nombre real para la pestaña y para el botón "Guardar" del lector PDF
+    return send_file(ruta_fisica, as_attachment=False, download_name=documento.nombre_archivo)
