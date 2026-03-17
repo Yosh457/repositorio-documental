@@ -272,3 +272,104 @@ def ver_auditoria_documental():
                                'buscador_id': buscador_filtro,
                                'tipo_evento': evento_filtro
                            })
+
+# --- GESTIÓN DE BUSCADORES ---
+
+@admin_bp.route('/buscadores')
+def listar_buscadores():
+    """Lista todos los buscadores/carpetas configurados en el sistema."""
+    page = request.args.get('page', 1, type=int)
+    busqueda = request.args.get('busqueda', '')
+
+    query = Buscador.query.order_by(Buscador.nombre)
+
+    if busqueda:
+        query = query.filter(
+            or_(Buscador.nombre.ilike(f'%{busqueda}%'),
+                Buscador.ruta_carpeta.ilike(f'%{busqueda}%'))
+        )
+
+    pagination = query.paginate(page=page, per_page=10, error_out=False)
+    return render_template('admin/listar_buscadores.html', pagination=pagination, busqueda=busqueda)
+
+@admin_bp.route('/crear_buscador', methods=['GET', 'POST'])
+def crear_buscador():
+    """Permite registrar un nuevo repositorio de red."""
+    if request.method == 'POST':
+        nombre = request.form.get('nombre', '').strip()
+        ruta_carpeta = request.form.get('ruta_carpeta', '').strip()
+
+        # Normalizamos la ruta quitando barras finales sobrantes
+        ruta_carpeta = ruta_carpeta.rstrip('\\/')
+
+        # 1. Validaciones de negocio (Unicidad)
+        if Buscador.query.filter_by(nombre=nombre).first():
+            flash('Error: Ya existe un buscador con ese nombre.', 'danger')
+            return render_template('admin/crear_buscador.html', datos_previos=request.form)
+            
+        elif Buscador.query.filter_by(ruta_carpeta=ruta_carpeta).first():
+            flash('Error: Esa ruta de red ya está asignada a otro buscador.', 'danger')
+            return render_template('admin/crear_buscador.html', datos_previos=request.form)
+            
+        # 2. Inserción en Base de Datos
+        nuevo_buscador = Buscador(nombre=nombre, ruta_carpeta=ruta_carpeta, activo=True)
+        try:
+            db.session.add(nuevo_buscador)
+            db.session.commit()
+            registrar_log_sistema("Creación Buscador", f"Admin registró el buscador '{nombre}' -> {ruta_carpeta}")
+            flash(f"Buscador '{nombre}' creado exitosamente. Recuerda ejecutar el Indexador para poblarlo.", 'success')
+            return redirect(url_for('admin.listar_buscadores'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error de base de datos al crear buscador: {str(e)}", 'danger')
+            return render_template('admin/crear_buscador.html', datos_previos=request.form)
+
+    # Respuesta para petición GET inicial
+    return render_template('admin/crear_buscador.html', datos_previos=None)
+
+@admin_bp.route('/editar_buscador/<int:id>', methods=['GET', 'POST'])
+def editar_buscador(id):
+    """Permite editar el nombre o corregir la ruta de red de un buscador."""
+    buscador = Buscador.query.get_or_404(id)
+
+    if request.method == 'POST':
+        nombre_nuevo = request.form.get('nombre', '').strip()
+        ruta_nueva = request.form.get('ruta_carpeta', '').strip().rstrip('\\/')
+
+        # 1. Validaciones de unicidad excluyendo el registro actual
+        if Buscador.query.filter(Buscador.nombre == nombre_nuevo, Buscador.id != id).first():
+            flash('Error: El nombre ya está en uso por otro buscador.', 'danger')
+            return render_template('admin/editar_buscador.html', buscador=buscador, datos_previos=request.form)
+            
+        elif Buscador.query.filter(Buscador.ruta_carpeta == ruta_nueva, Buscador.id != id).first():
+            flash('Error: La ruta de red ya está asignada a otro buscador.', 'danger')
+            return render_template('admin/editar_buscador.html', buscador=buscador, datos_previos=request.form)
+            
+        # 2. Actualización en Base de Datos
+        buscador.nombre = nombre_nuevo
+        buscador.ruta_carpeta = ruta_nueva
+        try:
+            db.session.commit()
+            registrar_log_sistema("Edición Buscador", f"Admin editó el buscador ID {id} ({nombre_nuevo})")
+            flash("Buscador actualizado correctamente.", 'success')
+            return redirect(url_for('admin.listar_buscadores'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error al actualizar la base de datos: {str(e)}", 'danger')
+            return render_template('admin/editar_buscador.html', buscador=buscador, datos_previos=request.form)
+
+    # Respuesta para petición GET inicial
+    return render_template('admin/editar_buscador.html', buscador=buscador, datos_previos=None)
+
+@admin_bp.route('/toggle_buscador/<int:id>', methods=['POST'])
+def toggle_buscador(id):
+    """Habilita o deshabilita un buscador completo."""
+    buscador = Buscador.query.get_or_404(id)
+    buscador.activo = not buscador.activo
+    db.session.commit()
+    
+    estado = "activado" if buscador.activo else "desactivado"
+    registrar_log_sistema("Cambio Estado Buscador", f"El buscador '{buscador.nombre}' fue {estado}.")
+    flash(f"Buscador '{buscador.nombre}' {estado} correctamente.", 'success')
+    
+    return redirect(url_for('admin.listar_buscadores'))

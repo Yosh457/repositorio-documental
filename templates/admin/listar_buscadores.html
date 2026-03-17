@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Gestión de Buscadores{% endblock %}
+{% from '_macros.html' import render_pagination %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto my-12 bg-white p-8 rounded-xl shadow-lg">
+    
+    <div class="flex justify-between items-center mb-6 border-b pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800">Gestión de Buscadores</h2>
+            <p class="text-gray-500 text-sm">Administración de rutas de red y catálogos documentales.</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{{ url_for('admin.panel') }}" class="btn btn-secondary">&larr; Volver al Panel</a>
+            <a href="{{ url_for('admin.crear_buscador') }}" class="btn btn-primary">
+                <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                Nuevo Buscador
+            </a>
+        </div>
+    </div>
+
+    {# Formulario de Filtros #}
+    <form method="get" action="{{ url_for('admin.listar_buscadores') }}" class="bg-gray-50 p-4 rounded-lg mb-6 flex gap-4 items-end">
+        <div class="flex-grow">
+            <label class="block text-sm font-medium text-gray-700">Buscar por Nombre o Ruta:</label>
+            <input type="text" name="busqueda" value="{{ busqueda }}" placeholder="Ej: Fichas Clínicas o \\10.20..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500">
+        </div>
+        <div class="flex gap-2 w-1/3">
+            <a href="{{ url_for('admin.listar_buscadores') }}" class="btn btn-secondary w-1/2">Limpiar</a>
+            <button type="submit" class="btn btn-primary w-1/2">Filtrar</button>
+        </div>
+    </form>
+
+    <div class="overflow-x-auto rounded-lg border border-gray-200">
+        <table class="min-w-full bg-white">
+            <thead class="bg-gray-100 border-b border-gray-200">
+                <tr>
+                    <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">Nombre del Buscador</th>
+                    <th class="py-3 px-4 text-left text-sm font-semibold text-gray-600 uppercase tracking-wider">Ruta de Red (Física)</th>
+                    <th class="py-3 px-4 text-center text-sm font-semibold text-gray-600 uppercase tracking-wider">Estado</th>
+                    <th class="py-3 px-4 text-center text-sm font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for buscador in pagination.items %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="py-3 px-4">
+                        <div class="font-bold text-gray-800">{{ buscador.nombre }}</div>
+                        <div class="text-xs text-gray-400 mt-1">ID Interno: {{ buscador.id }}</div>
+                    </td>
+                    <td class="py-3 px-4">
+                        <code class="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded">{{ buscador.ruta_carpeta }}</code>
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                        {% if buscador.activo %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Activo</span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                        <div class="flex justify-center gap-2">
+                            <a href="{{ url_for('admin.editar_buscador', id=buscador.id) }}" class="btn btn-secondary text-xs">Editar</a>
+                            <form action="{{ url_for('admin.toggle_buscador', id=buscador.id) }}" method="POST" class="inline m-0">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <button type="submit" class="btn {% if buscador.activo %}btn-warning{% else %}btn-primary{% endif %} text-xs">
+                                    {{ 'Bloquear' if buscador.activo else 'Activar' }}
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center py-10 text-gray-500 bg-gray-50">No se encontraron buscadores configurados.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {{ render_pagination(pagination, 'admin.listar_buscadores') }}
+</div>
+{% endblock %}

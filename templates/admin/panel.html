@@ -29,7 +29,8 @@
                 <h2 class="text-2xl font-bold text-gray-800">Gestión de Usuarios</h2>
                 <p class="text-gray-500 text-sm">Administración de cuentas y asignación de permisos de búsqueda.</p>
             </div>
-            <div class="flex gap-2">
+            <div class="flex gap-2 flex-wrap justify-end">
+                <a href="{{ url_for('admin.listar_buscadores') }}" class="btn btn-secondary">Gestión de Buscadores</a>
                 <a href="{{ url_for('admin.ver_logs_sistema') }}" class="btn btn-secondary">Ver Logs del Sistema</a>
                 <a href="{{ url_for('admin.ver_auditoria_documental') }}" class="btn btn-warning">Auditoría Documental</a>
                 <a href="{{ url_for('admin.crear_usuario') }}" class="btn btn-primary">Crear Usuario</a>
