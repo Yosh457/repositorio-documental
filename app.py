@@ -100,15 +100,3 @@ def create_app():
 @login_manager.user_loader
 def load_user(user_id):
     return Usuario.query.get(int(user_id))
-
-if __name__ == '__main__':
-    app = create_app()
-    with app.app_context():
-        # Crea las tablas según models.py si no existen
-        try:
-            db.create_all()
-            print("✅ Sistema Documental inicializado. Tablas verificadas en MySQL.")
-        except Exception as e:
-            print(f"❌ Error al conectar con BD: {e}")
-            
-    app.run(debug=True)
