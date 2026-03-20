@@ -2,7 +2,7 @@
 venv/
 env/
 
-# Variables de entorno (CRÍTICO)
+# Variables de entorno
 .env
 
 # Caché de Python
@@ -10,6 +10,10 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Logs
+logs/
+*.log
 
 # Archivos de SO
 .DS_Store
