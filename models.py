@@ -111,6 +111,7 @@ class LogSistema(db.Model):
     usuario_nombre = db.Column(db.String(255), nullable=True)
     accion = db.Column(db.String(255), nullable=False)
     detalles = db.Column(db.Text)
+    ip_origen = db.Column(db.String(50), nullable=True)
 
     usuario = db.relationship('Usuario')
 
@@ -125,6 +126,7 @@ class LogAuditoriaDocumental(db.Model):
     motivo = db.Column(db.Text)
     cantidad_resultados = db.Column(db.Integer, nullable=True)
     documento_id = db.Column(db.Integer, db.ForeignKey('documentos.id', ondelete='SET NULL'), nullable=True, index=True)
+    ip_origen = db.Column(db.String(50), nullable=True)
 
     usuario = db.relationship('Usuario')
     buscador = db.relationship('Buscador')

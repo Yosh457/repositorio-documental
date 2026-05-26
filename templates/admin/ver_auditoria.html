@@ -68,6 +68,7 @@
                     <th class="text-left py-3 px-4 font-bold text-xs text-gray-500 uppercase tracking-wider">Fecha / Usuario</th>
                     <th class="text-left py-3 px-4 font-bold text-xs text-gray-500 uppercase tracking-wider">Catálogo / Evento</th>
                     <th class="text-left py-3 px-4 font-bold text-xs text-gray-500 uppercase tracking-wider">Detalles de la Operación</th>
+                    <th class="text-left py-3 px-4 font-bold text-xs text-gray-500 uppercase tracking-wider">IP Origen</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -103,10 +104,13 @@
                             <div class="text-xs text-gray-500 mt-1">ID Interno: {{ log.documento_id }}</div>
                         {% endif %}
                     </td>
+                    <td class="py-3 px-4 text-sm text-gray-600">
+                        {{ log.ip_origen or 'N/A' }}
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="3" class="text-center py-10 text-gray-500 bg-gray-50">
+                    <td colspan="4" class="text-center py-10 text-gray-500 bg-gray-50">
                         No hay registros de auditoría que coincidan con los filtros.
                     </td>
                 </tr>
