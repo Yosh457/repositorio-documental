@@ -5,6 +5,8 @@ from flask_login import login_required, current_user
 
 from models import db, Buscador, Documento, LogAuditoriaDocumental
 
+from utils.helpers import obtener_ip_cliente
+
 buscadores_bp = Blueprint('buscadores', __name__, template_folder='../templates')
 
 # --- PROTECCIÓN GLOBAL ---
@@ -71,7 +73,8 @@ def buscar(buscador_id):
                 tipo_evento='BUSQUEDA',
                 termino_busqueda=busqueda_actual,
                 motivo=motivo_actual,
-                cantidad_resultados=len(resultados)
+                cantidad_resultados=len(resultados),
+                ip_origen=obtener_ip_cliente()
             )
             db.session.add(nuevo_log)
             db.session.commit()
@@ -103,7 +106,8 @@ def visor(documento_id):
         usuario_id=current_user.id,
         buscador_id=documento.buscador_id,
         tipo_evento='VISUALIZACION',
-        documento_id=documento.id
+        documento_id=documento.id,
+        ip_origen=obtener_ip_cliente()
     )
     db.session.add(nuevo_log)
     db.session.commit()
