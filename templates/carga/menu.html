@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Menú de Carga{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-4xl mx-auto pt-16 pb-12 px-4 sm:px-0">
+    <div class="bg-white p-8 rounded-xl shadow-lg text-center border border-gray-100">
+        
+        <div class="flex justify-between items-center border-b border-gray-200 pb-6 mb-8">
+            <div class="text-left">
+                <h1 class="text-3xl font-bold text-gray-800">Carga de Documentos</h1>
+                <p class="text-gray-500 mt-2">Selecciona el repositorio donde deseas subir archivos.</p>
+            </div>
+            <a href="{{ url_for('buscadores.index') }}" class="px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition">
+                &larr; Volver al Inicio
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+            {% if permisos %}
+                {% for buscador in permisos %}
+                <a href="{{ url_for('carga.explorador', buscador_id=buscador.id) }}" 
+                   class="group flex items-center justify-between p-5 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md hover:border-green-300 transition-all">
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-green-50 text-green-600 rounded-lg group-hover:bg-green-600 group-hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            </svg>
+                        </div>
+                        <span class="font-bold text-gray-700 group-hover:text-green-700 transition-colors">{{ buscador.nombre }}</span>
+                    </div>
+                    <svg class="w-5 h-5 text-gray-400 group-hover:text-green-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="col-span-full p-8 bg-gray-50 rounded-xl border border-gray-200 text-center">
+                    <p class="text-gray-600 font-medium">No tienes permisos de carga asignados.</p>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

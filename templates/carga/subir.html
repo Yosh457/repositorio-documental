@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+{% block title %}Explorador de Carga{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto my-8 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+    
+    {# --- HEADER --- #}
+    <div class="bg-gray-50 border-b border-gray-200 p-6 flex justify-between items-center">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                Destino: {{ buscador.nombre }}
+            </h2>
+            <p class="text-sm text-gray-500 mt-1">Navega por las carpetas para seleccionar dónde subirás los archivos.</p>
+        </div>
+        <a href="{{ url_for('carga.menu_carga') }}" class="btn btn-secondary text-sm">
+            &larr; Volver a Catálogos
+        </a>
+    </div>
+
+    <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {# --- PANEL IZQUIERDO: EXPLORADOR DE CARPETAS --- #}
+        <div class="lg:col-span-2 flex flex-col h-[500px]">
+            
+            {# BREADCRUMBS (Migas de pan dinámicas) #}
+            <div id="breadcrumbs" class="flex flex-wrap items-center gap-2 mb-4 p-3 bg-gray-100 rounded-lg text-sm font-medium text-gray-700">
+                <span class="text-gray-400">Cargando ruta...</span>
+            </div>
+
+            {# CONTENEDOR DE CARPETAS #}
+            <div id="carpetas-container" class="flex-grow overflow-y-auto border border-gray-200 rounded-lg p-4 bg-white grid grid-cols-1 sm:grid-cols-2 gap-3 content-start">
+                <div class="col-span-full text-center text-gray-400 py-10">
+                    <svg class="animate-spin h-8 w-8 mx-auto text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Cargando estructura...
+                </div>
+            </div>
+        </div>
+
+        {# --- PANEL DERECHO: ZONA DE SUBIDA --- #}
+        <div class="flex flex-col h-[500px] border-l border-gray-100 pl-0 lg:pl-8 mt-8 lg:mt-0">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Subir Archivos</h3>
+            
+            <div id="drop-zone" class="bg-blue-50 border-2 border-dashed border-blue-300 rounded-xl p-8 text-center flex-grow flex flex-col justify-center items-center transition-all duration-200">
+                <svg class="w-16 h-16 text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                <p class="text-gray-700 font-bold mb-1">Arrastra tus archivos aquí</p>
+                <p class="text-sm text-gray-500 mb-6">o haz clic para buscar en tu equipo</p>
+                
+                <form id="upload-form" class="w-full">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="ruta_destino" id="ruta_destino_input" value="">
+                    
+                    <label class="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg cursor-pointer hover:bg-blue-700 transition shadow">
+                        Examinar...
+                        <input type="file" class="hidden" id="file-input" name="archivos" multiple accept="application/pdf">
+                    </label>
+                </form>
+            </div>
+            
+            <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
+                <strong>Atención:</strong> Verifica en el panel izquierdo que estás en la carpeta correcta antes de subir. Los nombres de los archivos se mantendrán iguales. Solo se permiten PDFs (Máx 50MB).
+            </div>
+
+            {# CAJA DE RESULTADOS (Oculta por defecto) #}
+            <div id="resultados-upload" class="hidden mt-4 bg-white border border-gray-200 rounded-lg p-4 shadow-sm overflow-y-auto max-h-48">
+                <h4 class="font-bold text-gray-800 text-sm mb-2 border-b pb-1">Resultados de la Carga</h4>
+                <ul id="lista-resultados" class="space-y-2 text-xs">
+                    </ul>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{# --- MODAL DE CONFIRMACIÓN DE CARGA --- #}
+<div id="upload-modal" class="fixed inset-0 z-50 items-center justify-center hidden bg-black bg-opacity-50 backdrop-blur-sm flex">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 m-4 transform transition-all scale-100 flex flex-col max-h-[90vh]">
+        <div class="flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 mx-auto mb-4 flex-shrink-0">
+            <svg class="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-2 text-center flex-shrink-0">Confirmar Subida</h3>
+        
+        <div class="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200 flex-shrink-0">
+            <p class="text-sm text-gray-600 mb-2">Estás a punto de subir <strong id="modal-file-count" class="text-blue-600">X</strong> archivo(s) al destino:</p>
+            <p class="text-sm font-mono text-gray-800 font-bold bg-white p-2 border border-gray-300 rounded shadow-inner break-words">
+                Raíz <span id="modal-folder-path"></span>
+            </p>
+        </div>
+
+        {# --- NUEVA SECCIÓN: Lista de archivos a subir --- #}
+        <div class="mb-6 overflow-y-auto flex-grow border border-gray-200 rounded-lg bg-white p-2 min-h-[100px]">
+            <ul id="modal-file-list" class="divide-y divide-gray-100">
+                </ul>
+        </div>
+
+        <div class="flex justify-center gap-3 flex-shrink-0 border-t pt-4">
+            <button id="cancel-upload-btn" class="px-5 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition">Cancelar</button>
+            <button id="confirm-upload-btn" class="px-5 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md transition">Sí, Subir Archivos</button>
+        </div>
+    </div>
+</div>
+
+{# --- SCRIPT PRINCIPAL --- #}
+<script>
+    const buscadorId = parseInt("{{ buscador.id }}", 10);
+    const carpetasContainer = document.getElementById('carpetas-container');
+    const breadcrumbsContainer = document.getElementById('breadcrumbs');
+    const rutaDestinoInput = document.getElementById('ruta_destino_input');
+    const fileInput = document.getElementById('file-input');
+    const resultadosBox = document.getElementById('resultados-upload');
+    const listaResultados = document.getElementById('lista-resultados');
+    
+    let currentPath = "";
+
+    // --- NUEVO: FUNCIONES DE AYUDA (UX) ---
+    const MAX_FILE_SIZE_MB = 50;
+    const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+    function formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+
+    // --- FUNCIONES DE NAVEGACIÓN API ---
+    // Función principal que consume nuestra API
+    async function cargarCarpetas(ruta) {
+        try {
+            // Animación de carga
+            carpetasContainer.innerHTML = '<div class="col-span-full text-center text-gray-400 py-10">Cargando...</div>';
+            
+            const response = await fetch(`/carga/api/carpetas/${buscadorId}?ruta=${encodeURIComponent(ruta)}`);
+            if (!response.ok) throw new Error('No autorizado o error de servidor');
+            
+            const data = await response.json();
+            currentPath = data.ruta_actual;
+            rutaDestinoInput.value = currentPath; // Guardamos la ruta para cuando subamos el archivo
+            
+            dibujarBreadcrumbs(currentPath);
+            dibujarCarpetas(data.carpetas, currentPath);
+
+        } catch (error) {
+            console.error(error);
+            carpetasContainer.innerHTML = `<div class="col-span-full text-center text-red-500 py-10 font-bold">Error al cargar directorio.</div>`;
+        }
+    }
+
+    // Función para dibujar los breadcrumbs dinámicamente
+    function dibujarBreadcrumbs(ruta) {
+        breadcrumbsContainer.innerHTML = '';
+        
+        // Botón Raíz
+        const btnRaiz = document.createElement('button');
+        btnRaiz.className = 'hover:text-blue-600 focus:outline-none flex items-center gap-1';
+        btnRaiz.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg> Raíz';
+        btnRaiz.onclick = () => cargarCarpetas('');
+        breadcrumbsContainer.appendChild(btnRaiz);
+
+        if (!ruta) return;
+
+        const partes = ruta.split(/\\|\//); // Separa por \ o /
+        let rutaAcumulada = '';
+
+        partes.forEach((parte, index) => {
+            if (!parte) return;
+
+            rutaAcumulada += (rutaAcumulada === '' ? '' : '\\') + parte;
+            const rutaParam = rutaAcumulada;
+
+            // Separador
+            const separador = document.createElement('span');
+            separador.className = 'text-gray-400';
+            separador.innerText = '/';
+            breadcrumbsContainer.appendChild(separador);
+
+            // Botón de la parte
+            const btn = document.createElement('button');
+            btn.className = index === partes.length - 1 ? 'text-gray-800 font-bold' : 'hover:text-blue-600 focus:outline-none';
+            btn.innerText = parte;
+            if (index !== partes.length - 1) {
+                btn.onclick = () => cargarCarpetas(rutaParam);
+            }
+            breadcrumbsContainer.appendChild(btn);
+        });
+    }
+
+    // Función para dibujar las carpetas como tarjetas
+    function dibujarCarpetas(carpetas, rutaPadre) {
+        carpetasContainer.innerHTML = '';
+        
+        if (carpetas.length === 0) {
+            carpetasContainer.innerHTML = '<div class="col-span-full text-center text-gray-500 py-10">Esta carpeta está vacía. Puedes subir archivos aquí.</div>';
+            return;
+        }
+
+        carpetas.forEach(carpeta => {
+            const nuevaRuta = rutaPadre === '' ? carpeta : rutaPadre + '\\' + carpeta;
+            
+            const btn = document.createElement('button');
+            btn.className = 'flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition text-left focus:outline-none';
+            btn.innerHTML = `
+                <svg class="w-6 h-6 text-yellow-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>
+                <span class="text-sm font-medium text-gray-700 truncate w-full" title="${carpeta}">${carpeta}</span>
+            `;
+            btn.onclick = () => cargarCarpetas(nuevaRuta);
+            carpetasContainer.appendChild(btn);
+        });
+    }
+
+    // Iniciar cargando la raíz
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarCarpetas('');
+    });
+
+    // --- LÓGICA DEL MODAL Y VALIDACIÓN TEMPRANA ---
+    const uploadModal = document.getElementById('upload-modal');
+    const modalFileCount = document.getElementById('modal-file-count');
+    const modalFolderPath = document.getElementById('modal-folder-path');
+    const modalFileList = document.getElementById('modal-file-list');
+    const cancelUploadBtn = document.getElementById('cancel-upload-btn');
+    const confirmUploadBtn = document.getElementById('confirm-upload-btn');
+
+    let pendingFiles = null; // Guardará temporalmente los archivos seleccionados
+
+    function procesarArchivosSeleccionados(archivos) {
+        if (archivos.length === 0) return;
+
+        let allValid = true;
+        let oversizeError = false;
+
+        // 1. Validaciones tempranas (Tipo y Tamaño)
+        for(let i=0; i < archivos.length; i++) {
+            if (archivos[i].type !== 'application/pdf') {
+                allValid = false;
+                break;
+            }
+            if (archivos[i].size > MAX_FILE_SIZE_BYTES) {
+                oversizeError = true;
+                break;
+            }
+        }
+
+        // 2. Mostrar errores visuales
+        if (!allValid || oversizeError) {
+            pendingFiles = null; 
+            fileInput.value = '';
+            resultadosBox.classList.remove('hidden');
+            
+            const tituloError = !allValid ? "Archivo inválido detectado" : "Archivo demasiado grande";
+            const detalleError = !allValid 
+                ? "Solo se permiten documentos en formato <strong>.pdf</strong>." 
+                : `Uno o más archivos superan el límite de <strong>${MAX_FILE_SIZE_MB} MB</strong>.`;
+
+            listaResultados.innerHTML = `
+                <li class="bg-red-50 border border-red-200 text-red-800 rounded-lg p-4 flex items-start gap-3 shadow-sm">
+                    <svg class="w-6 h-6 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <div>
+                        <p class="font-bold text-sm">${tituloError}</p>
+                        <p class="text-xs mt-1 text-red-600">${detalleError}<br>Por favor revisa tu selección e inténtalo nuevamente.</p>
+                    </div>
+                </li>
+            `;
+            return;
+        }
+
+        // 3. Preparar Modal y Lista de Archivos
+        pendingFiles = archivos;
+        modalFileCount.innerText = pendingFiles.length;
+        modalFolderPath.innerText = currentPath ? ' / ' + currentPath : '';
+        
+        modalFileList.innerHTML = ''; // Limpiar lista
+        for(let i=0; i < pendingFiles.length; i++) {
+            const li = document.createElement('li');
+            li.className = 'py-2 px-3 flex justify-between items-center text-sm hover:bg-gray-50 transition';
+            li.innerHTML = `
+                <span class="truncate font-medium text-gray-700 max-w-[70%] text-xs" title="${pendingFiles[i].name}">${pendingFiles[i].name}</span>
+                <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full font-mono whitespace-nowrap">${formatBytes(pendingFiles[i].size)}</span>
+            `;
+            modalFileList.appendChild(li);
+        }
+
+        uploadModal.classList.remove('hidden');
+    }
+
+    // Evento del botón Examinar
+    fileInput.addEventListener('change', function(e) {
+        procesarArchivosSeleccionados(this.files);
+    });
+
+    // --- LÓGICA DE DRAG & DROP ---
+    const dropZone = document.getElementById('drop-zone');
+
+    // 1. Prevenir que el navegador intente abrir el PDF al soltarlo
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    // 2. Efecto visual al arrastrar (Feedback UX)
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.add('bg-blue-100', 'border-blue-500', 'scale-[1.02]');
+            dropZone.classList.remove('bg-blue-50', 'border-blue-300');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.remove('bg-blue-100', 'border-blue-500', 'scale-[1.02]');
+            dropZone.classList.add('bg-blue-50', 'border-blue-300');
+        }, false);
+    });
+
+    // 3. Capturar los archivos al soltarlos (Drop)
+    dropZone.addEventListener('drop', function(e) {
+        procesarArchivosSeleccionados(e.dataTransfer.files);
+    }, false);
+
+    // --- ACCIONES DEL MODAL ---
+    cancelUploadBtn.addEventListener('click', () => {
+        uploadModal.classList.add('hidden');
+        fileInput.value = '';
+        pendingFiles = null;
+    });
+
+    confirmUploadBtn.addEventListener('click', () => {
+        uploadModal.classList.add('hidden');
+        if (pendingFiles) subirArchivos(pendingFiles);
+    });
+
+    // --- LÓGICA DE SUBIDA AJAX ---
+    async function subirArchivos(archivos) {
+        // UI de carga
+        const token = document.querySelector('input[name="csrf_token"]').value;
+        resultadosBox.classList.remove('hidden');
+        listaResultados.innerHTML = `<li class="text-blue-600 font-bold flex items-center gap-2"><svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Subiendo archivos, por favor espera...</li>`;
+        
+        // Empaquetar datos
+        const formData = new FormData();
+        formData.append('csrf_token', token);
+        formData.append('buscador_id', buscadorId);
+        formData.append('ruta_destino', currentPath);
+        
+        for (let i = 0; i < archivos.length; i++) {
+            formData.append('archivos', archivos[i]);
+        }
+
+        try {
+            const response = await fetch('/carga/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                listaResultados.innerHTML = `<li class="text-red-600 font-bold flex items-start gap-2">❌ <span>Error Crítico: ${data.error || 'Error del servidor'}</span></li>`;
+                return;
+            }
+
+            // Actualizar UI
+            listaResultados.innerHTML = '';
+            data.detalles.forEach(res => {
+                const li = document.createElement('li');
+                li.className = 'flex items-start gap-2 border-b border-gray-100 pb-2 last:border-0';
+                if (res.estado === 'success') {
+                    li.innerHTML = `<span class="text-green-600">✅</span> <div><span class="font-semibold">${res.archivo}</span> <span class="text-gray-500">- ${res.mensaje}</span></div>`;
+                } else {
+                    li.innerHTML = `<span class="text-red-600">❌</span> <div><span class="font-semibold text-red-600">${res.archivo}</span> <span class="text-gray-500">- ${res.mensaje}</span></div>`;
+                }
+                listaResultados.appendChild(li);
+            });
+
+            // Agregar resumen al inicio de la lista
+            const resumen = document.createElement('li');
+            resumen.className = `font-bold p-2 rounded mb-2 ${data.errores === 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`;
+            resumen.innerHTML = `Resumen: ${data.exitosos} subidos exitosamente, ${data.errores} rechazados.`;
+            listaResultados.prepend(resumen);
+
+        } catch (error) {
+            console.error(error);
+            listaResultados.innerHTML = `<li class="text-red-600 font-bold flex items-start gap-2">❌ <span>Error de red o conexión perdida.</span></li>`;
+        } finally {
+            fileInput.value = ''; // Limpiar el input para permitir subir más cosas después
+            pendingFiles = null;
+        }
+    }
+</script>
+{% endblock %}
