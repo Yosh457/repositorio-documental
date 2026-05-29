@@ -84,19 +84,32 @@
 
                 {# BLOQUE DE PERMISOS GRANULARES #}
                 <div class="border border-gray-200 rounded-xl p-5 bg-gray-50">
-                    <h3 class="text-sm font-bold text-gray-800 mb-1">Permisos de Búsqueda Documental</h3>
-                    <p class="text-xs text-gray-500 mb-4">Selecciona los catálogos a los que este usuario tendrá acceso.</p>
+                    <h3 class="text-sm font-bold text-gray-800 mb-1">Permisos por Catálogo</h3>
+                    <p class="text-xs text-gray-500 mb-4">Define si el usuario puede buscar/ver y/o subir documentos a cada repositorio.</p>
                     
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-2">
                         {% for buscador in buscadores %}
-                        <label class="flex items-center space-x-3 bg-white p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 transition shadow-sm">
-                            <input type="checkbox"
-                                   name="buscadores"
-                                   value="{{ buscador.id }}"
-                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                   {% if datos_previos and buscador.id|string in datos_previos.getlist('buscadores') %}checked{% endif %}>
-                            <span class="text-sm font-medium text-gray-700">{{ buscador.nombre }}</span>
-                        </label>
+                        <div class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm transition hover:border-blue-300">
+                            <div class="text-sm font-bold text-gray-700 mb-2 border-b border-gray-100 pb-1">{{ buscador.nombre }}</div>
+                            <div class="flex items-center gap-4">
+                                <label class="flex items-center space-x-2 cursor-pointer group">
+                                    <input type="checkbox"
+                                           name="ver_{{ buscador.id }}"
+                                           value="1"
+                                           class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                           {% if datos_previos and datos_previos.get('ver_' ~ buscador.id) == '1' %}checked{% endif %}>
+                                    <span class="text-xs font-medium text-gray-600 group-hover:text-blue-700">🔍 Visualizar</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer group">
+                                    <input type="checkbox"
+                                           name="cargar_{{ buscador.id }}"
+                                           value="1"
+                                           class="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                                           {% if datos_previos and datos_previos.get('cargar_' ~ buscador.id) == '1' %}checked{% endif %}>
+                                    <span class="text-xs font-medium text-gray-600 group-hover:text-green-700">📤 Cargar</span>
+                                </label>
+                            </div>
+                        </div>
                         {% else %}
                         <p class="text-sm text-red-500 col-span-2">No hay buscadores configurados en el sistema.</p>
                         {% endfor %}

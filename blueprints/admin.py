@@ -4,8 +4,8 @@ from flask_login import login_required, current_user
 from sqlalchemy import or_
 
 # Modelos (Nuestra nueva estructura de base de datos)
-from models import db, Usuario, RolAplicacion, Profesion, Buscador, LogSistema, LogAuditoriaDocumental
-# Utilidades (Importamos las que ya limpiamos en el Paso 3)
+from models import db, Usuario, RolAplicacion, Profesion, Buscador, LogSistema, LogAuditoriaDocumental, UsuarioBuscador
+# Utilidades
 from utils import registrar_log_sistema, admin_required, enviar_credenciales_nuevo_usuario
 
 # Instanciamos el blueprint
@@ -84,9 +84,6 @@ def crear_usuario():
         rol_id = request.form.get('rol_id')
         profesion_id = request.form.get('profesion_id') # Puede venir vacío
         forzar_cambio = request.form.get('forzar_cambio_clave') == '1'
-        
-        # Obtenemos la lista de IDs de los buscadores seleccionados (Checkboxes)
-        buscadores_ids = request.form.getlist('buscadores')
 
         # 1. Validación de duplicidad
         if Usuario.query.filter_by(email=email).first():
@@ -106,18 +103,26 @@ def crear_usuario():
         )
         nuevo_usuario.set_password(password)
         
-        # 3. Asignación de permisos Many-to-Many
-        if buscadores_ids:
-            # Filtramos los buscadores cuyos IDs coincidan con los seleccionados y los adjuntamos al usuario
-            buscadores_seleccionados = Buscador.query.filter(Buscador.id.in_(buscadores_ids)).all()
-            nuevo_usuario.buscadores_permitidos = buscadores_seleccionados
+        # 3. Asignación de permisos granulares (Association Object Pattern)
+        for buscador in buscadores:
+            # Capturamos si los checkboxes específicos vinieron marcados
+            puede_ver = request.form.get(f'ver_{buscador.id}') == '1'
+            puede_cargar = request.form.get(f'cargar_{buscador.id}') == '1'
+
+            if puede_ver or puede_cargar:
+                nuevo_permiso = UsuarioBuscador(
+                    buscador_id=buscador.id,
+                    puede_visualizar=puede_ver,
+                    puede_cargar=puede_cargar
+                )
+                nuevo_usuario.permisos_buscadores.append(nuevo_permiso)
         
         try:
             db.session.add(nuevo_usuario)
             db.session.commit()
 
             # 4. Auditoría y Notificación (Log + Envío de Credenciales)
-            registrar_log_sistema("Creación Usuario", f"El Admin creó a {nombre} ({email}) con {len(buscadores_ids)} permisos de búsqueda.")
+            registrar_log_sistema("Creación Usuario", f"El Admin creó a {nombre} ({email}) con {len(nuevo_usuario.permisos_buscadores)} permisos asignados.")
             
             if enviar_credenciales_nuevo_usuario(nuevo_usuario, password):
                 flash(f'Usuario creado con éxito. Credenciales enviadas a {email}.', 'success')
@@ -166,12 +171,23 @@ def editar_usuario(id):
             usuario.set_password(password)
             flash('Contraseña actualizada correctamente.', 'info')
 
-        # 3. Actualización de permisos de Búsqueda (Many-to-Many)
-        buscadores_ids = request.form.getlist('buscadores')
-        if buscadores_ids:
-            usuario.buscadores_permitidos = Buscador.query.filter(Buscador.id.in_(buscadores_ids)).all()
-        else:
-            usuario.buscadores_permitidos = [] # Revocar todos los permisos
+        # 3. Actualización de permisos granulares
+        # Primero eliminamos todos los permisos existentes para este usuario
+        UsuarioBuscador.query.filter_by(usuario_id=usuario.id).delete()
+
+        # Luego insertamos los nuevos
+        for buscador in buscadores:
+            puede_ver = request.form.get(f'ver_{buscador.id}') == '1'
+            puede_cargar = request.form.get(f'cargar_{buscador.id}') == '1'
+
+            if puede_ver or puede_cargar:
+                nuevo_permiso = UsuarioBuscador(
+                    usuario_id=usuario.id,
+                    buscador_id=buscador.id,
+                    puede_visualizar=puede_ver,
+                    puede_cargar=puede_cargar
+                )
+                db.session.add(nuevo_permiso)
 
         try:
             db.session.commit()
@@ -253,14 +269,15 @@ def ver_auditoria_documental():
         query = query.filter(LogAuditoriaDocumental.usuario_id == int(usuario_filtro))
     if buscador_filtro and buscador_filtro.isdigit():
         query = query.filter(LogAuditoriaDocumental.buscador_id == int(buscador_filtro))
-    if evento_filtro in ['BUSQUEDA', 'VISUALIZACION']:
+    # Filtro ampliado para soportar CARGA
+    if evento_filtro in ['BUSQUEDA', 'VISUALIZACION', 'CARGA']:
         query = query.filter(LogAuditoriaDocumental.tipo_evento == evento_filtro)
 
     pagination = query.paginate(page=page, per_page=15, error_out=False)
     
     todos_los_usuarios = Usuario.query.order_by(Usuario.nombre_completo).all()
     todos_los_buscadores = Buscador.query.order_by(Buscador.nombre).all()
-    tipos_evento = ['BUSQUEDA', 'VISUALIZACION']
+    tipos_evento = ['BUSQUEDA', 'VISUALIZACION', 'CARGA']
 
     return render_template('admin/ver_auditoria.html', 
                            pagination=pagination,

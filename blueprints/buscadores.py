@@ -4,7 +4,6 @@ from flask import Blueprint, render_template, request, flash, abort, send_file
 from flask_login import login_required, current_user
 
 from models import db, Buscador, Documento, LogAuditoriaDocumental
-
 from utils.helpers import obtener_ip_cliente
 
 buscadores_bp = Blueprint('buscadores', __name__, template_folder='../templates')
@@ -24,12 +23,21 @@ def before_request():
 def index():
     """
     Menú Principal Dinámico.
-    Muestra únicamente los botones correspondientes a los buscadores 
-    que el administrador le asignó al usuario y que se encuentren activos.
+    Muestra únicamente los catálogos donde el usuario tiene permiso de VISUALIZAR y están activos.
+    También evalúa si el usuario tiene permiso de CARGAR en al menos un catálogo activo.
     """
-    # Filtramos la relación para asegurar que solo mostramos catálogos activos
-    permisos = [b for b in current_user.buscadores_permitidos if b.activo]
-    return render_template('buscadores/index.html', permisos=permisos)
+    # 1. Filtramos los buscadores permitidos para visualizar
+    permisos = [
+        p.buscador for p in current_user.permisos_buscadores 
+        if p.puede_visualizar and p.buscador.activo
+    ]
+    
+    # 2. Verificamos si tiene permisos de carga en algún lugar
+    puede_cargar_algo = any(
+        p.puede_cargar for p in current_user.permisos_buscadores if p.buscador.activo
+    )
+
+    return render_template('buscadores/index.html', permisos=permisos, puede_cargar_algo=puede_cargar_algo)
 
 @buscadores_bp.route('/buscar/<int:buscador_id>', methods=['GET', 'POST'])
 def buscar(buscador_id):
@@ -40,8 +48,9 @@ def buscar(buscador_id):
     # 1. Validamos que el buscador exista y esté activo
     buscador = Buscador.query.filter_by(id=buscador_id, activo=True).first_or_404()
 
-    # 2. Validación Estricta de Permisos de Acceso al Buscador
-    if buscador not in current_user.buscadores_permitidos:
+    # 2. Validación Estricta de Permisos: ¿Puede VISUALIZAR este buscador?
+    permiso = next((p for p in current_user.permisos_buscadores if p.buscador_id == buscador_id and p.puede_visualizar), None)
+    if not permiso:
         abort(403)
 
     resultados = None
@@ -97,8 +106,9 @@ def visor(documento_id):
     # 1. Validamos que el documento exista y esté activo
     documento = Documento.query.filter_by(id=documento_id, activo=True).first_or_404()
 
-    # 2. Validación de Permisos (¿El usuario puede ver ESTE documento?)
-    if documento.buscador not in current_user.buscadores_permitidos or not documento.buscador.activo:
+    # 2. Validación de Permisos: ¿Puede VISUALIZAR el buscador de este documento?
+    permiso = next((p for p in current_user.permisos_buscadores if p.buscador_id == documento.buscador_id and p.puede_visualizar), None)
+    if not permiso or not documento.buscador.activo:
         abort(403)
 
     # 3. Trazabilidad Estricta: Registro de Visualización Exacta

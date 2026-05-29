@@ -12,13 +12,29 @@ def obtener_hora_chile():
     return datetime.now(cl_tz)
 
 # ==============================================================================
-# TABLAS PUENTE (MANY-TO-MANY)
+# TABLAS DE ASOCIACIÓN (ASSOCIATION OBJECT PATTERN)
 # ==============================================================================
 
-usuario_buscadores = db.Table('usuario_buscadores',
-    db.Column('usuario_id', db.Integer, db.ForeignKey('usuarios.id', ondelete='CASCADE'), primary_key=True),
-    db.Column('buscador_id', db.Integer, db.ForeignKey('buscadores.id', ondelete='CASCADE'), primary_key=True)
-)
+class UsuarioBuscador(db.Model):
+    """
+    Modelo de asociación entre Usuario y Buscador.
+    Reemplaza la antigua tabla puente simple para permitir permisos granulares.
+    """
+    __tablename__ = 'usuario_buscadores'
+    
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id', ondelete='CASCADE'), primary_key=True)
+    buscador_id = db.Column(db.Integer, db.ForeignKey('buscadores.id', ondelete='CASCADE'), primary_key=True)
+    
+    # Permisos granulares
+    puede_visualizar = db.Column(db.Boolean, default=True, nullable=False)
+    puede_cargar = db.Column(db.Boolean, default=False, nullable=False)
+    
+    # Auditoría de asignación
+    fecha_asignacion = db.Column(db.DateTime, default=obtener_hora_chile)
+
+    # Relaciones bidireccionales
+    usuario = db.relationship('Usuario', back_populates='permisos_buscadores')
+    buscador = db.relationship('Buscador', back_populates='permisos_usuarios')
 
 # ==============================================================================
 # CATÁLOGOS Y CONFIGURACIÓN
@@ -47,7 +63,8 @@ class Buscador(db.Model):
     activo = db.Column(db.Boolean, default=True)
 
     documentos = db.relationship('Documento', back_populates='buscador', cascade="all, delete-orphan")
-    usuarios = db.relationship('Usuario', secondary=usuario_buscadores, back_populates='buscadores_permitidos')
+    # Actualizado al nuevo patrón de asociación
+    permisos_usuarios = db.relationship('UsuarioBuscador', back_populates='buscador', cascade="all, delete-orphan")
 
 # ==============================================================================
 # TABLAS PRINCIPALES
@@ -73,7 +90,8 @@ class Usuario(db.Model, UserMixin):
     profesion_id = db.Column(db.Integer, db.ForeignKey('profesiones.id'), nullable=True, index=True)
     profesion = db.relationship('Profesion', back_populates='usuarios')
 
-    buscadores_permitidos = db.relationship('Buscador', secondary=usuario_buscadores, back_populates='usuarios')
+    # Actualizado al nuevo patrón de asociación
+    permisos_buscadores = db.relationship('UsuarioBuscador', back_populates='usuario', cascade="all, delete-orphan")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -121,7 +139,10 @@ class LogAuditoriaDocumental(db.Model):
     timestamp = db.Column(db.DateTime, default=obtener_hora_chile, index=True)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id', ondelete='SET NULL'), nullable=True)
     buscador_id = db.Column(db.Integer, db.ForeignKey('buscadores.id', ondelete='SET NULL'), nullable=True)
-    tipo_evento = db.Column(db.Enum('BUSQUEDA', 'VISUALIZACION', name='tipo_evento_enum'), nullable=False)
+    
+    # ENUM ACTUALIZADO: Se agregó 'CARGA'
+    tipo_evento = db.Column(db.Enum('BUSQUEDA', 'VISUALIZACION', 'CARGA', name='tipo_evento_enum'), nullable=False)
+    
     termino_busqueda = db.Column(db.String(255), nullable=True)
     motivo = db.Column(db.Text)
     cantidad_resultados = db.Column(db.Integer, nullable=True)
