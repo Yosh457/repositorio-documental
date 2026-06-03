@@ -1,16 +1,16 @@
-# 📁 Repositorio Documental - Búsqueda y Visualización Centralizada de Documentos
+# 📁 Repositorio Documental - Búsqueda, Carga y Visualización Centralizada de Documentos
 
 ![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-3.x-green.svg)
 ![Database](https://img.shields.io/badge/Database-MySQL_8+-blue.svg)
 ![ORM](https://img.shields.io/badge/ORM-SQLAlchemy-red.svg)
 
-Plataforma web desarrollada para la **Red de Atención Primaria de Salud Municipal de Alto Hospicio**. Su objetivo es centralizar la búsqueda, visualización y auditoría de documentos físicos alojados en recursos compartidos de red, garantizando trazabilidad clínica/legal y evitando la exposición de rutas sensibles.
+Plataforma web desarrollada para la **Red de Atención Primaria de Salud Municipal de Alto Hospicio**. Su objetivo es centralizar la búsqueda, carga, visualización y auditoría de documentos físicos alojados en recursos compartidos de red, garantizando trazabilidad clínica/legal y evitando la exposición de rutas sensibles.
 
 ## 📌 Estado Actual del Proyecto
 
 - **Estado actual:** sistema funcional y validado en entorno local.
-- **Cobertura actual:** autenticación, administración, gestión de buscadores, búsqueda documental, visor seguro, auditoría documental e indexación batch.
+- **Cobertura actual:** autenticación, administración, gestión de buscadores, búsqueda documental, visor seguro, auditoría documental, módulo de carga documental e indexación batch.
 - **Próxima etapa:** documentación operativa de despliegue y posterior preparación para ejecución en servidor Windows.
 
 ## 🧩 Módulos Actualmente Operativos
@@ -18,15 +18,17 @@ Plataforma web desarrollada para la **Red de Atención Primaria de Salud Municip
 El sistema cuenta actualmente con los siguientes módulos construidos y funcionales:
 
 1. **Autenticación:** login, cambio obligatorio de clave, reseteo vía token de correo y control de sesión con timeout por inactividad (lado cliente).
-2. **Administración de Usuarios:** creación, edición, activación/desactivación y asignación granular de permisos por buscador.
+2. **Administración de Usuarios:** creación, edición, activación/desactivación y asignación de permisos granulares independientes para visualización y carga mediante patrón *Association Object*.
 3. **Gestión de Buscadores:** creación, edición, activación/desactivación y administración de rutas físicas de red.
 4. **Búsqueda Documental:** motor de búsqueda con ingreso obligatorio de motivo de auditoría.
 5. **Visor Seguro:** entrega protegida de archivos PDF sin exponer la ruta física real.
-6. **Auditoría Documental:** registro y visualización administrativa de búsquedas y visualizaciones.
-7. **Indexador Batch:** proceso de sincronización entre almacenamiento físico y base de datos con soft-delete y reactivación.
+6. **Módulo de Carga Documental:** explorador interactivo para la subida segura de nuevos archivos hacia las rutas físicas con validación y auto-indexación transaccional.
+7. **Auditoría Documental:** registro y visualización administrativa de búsquedas, visualizaciones y cargas de archivos.
+8. **Indexador Batch:** proceso de sincronización entre almacenamiento físico y base de datos con soft-delete y reactivación.
 
-## 🔄 Flujo General del Sistema
+## 🔄 Flujos Generales del Sistema
 
+### Flujo de Búsqueda y Visualización
 1. El usuario accede al sistema mediante autenticación.
 2. El sistema carga dinámicamente los buscadores según los permisos asignados al usuario.
 3. El usuario realiza una búsqueda ingresando término y motivo.
@@ -36,6 +38,14 @@ El sistema cuenta actualmente con los siguientes módulos construidos y funciona
 7. El sistema valida acceso y entrega el archivo mediante un visor seguro sin exponer la ruta física.
 8. Se registra el evento de visualización en la auditoría documental.
 
+### Flujo de Carga Documental
+1. El usuario accede al sistema mediante autenticación.
+2. El sistema habilita el acceso al módulo de carga si el usuario posee dicho permiso explícito.
+3. El usuario navega progresivamente por la estructura de carpetas de red asociada al buscador (carga dinámica vía AJAX).
+4. El usuario selecciona o arrastra uno o múltiples documentos hacia el área de carga.
+5. Tras confirmación, el backend valida el tamaño, el formato y verifica la inexistencia de duplicados lógicos o físicos.
+6. Se guarda el archivo en el sistema de archivos, se indexa su Hash SHA-256 en la base de datos de manera inmediata y se registra el evento en la auditoría documental (incluyendo IP origen y ruta de destino).
+
 ## 🚀 Características Principales
 
 ### 🔍 Motor de búsqueda documental
@@ -44,6 +54,15 @@ El sistema cuenta actualmente con los siguientes módulos construidos y funciona
 - **Menú dinámico por permisos:** cada usuario solo visualiza los buscadores que tiene asignados.
 - **Visor enmascarado:** los PDFs se sirven mediante `send_file`, evitando exponer directamente rutas UNC o rutas físicas del storage.
 - **Control de acceso real:** antes de servir cualquier documento, el backend valida que el usuario tenga permisos sobre el buscador correspondiente.
+
+### 📤 Módulo de Carga Documental
+
+- **Navegación progresiva (AJAX):** lectura controlada de directorios de red por niveles para evitar problemas de timeout en carpetas masivas.
+- **Protección *Path Traversal*:** blindaje en la resolución de rutas mediante la librería `pathlib`.
+- **Validaciones de Integridad:** límite de 50 MB por archivo y restricción estricta de extensiones (solo `.pdf`).
+- **Política anti-duplicados:** detección y bloqueo de duplicados a nivel físico en la carpeta y a nivel lógico en BD mediante identificadores SHA-256 generados sobre rutas relativas normalizadas.
+- **Indexación inmediata:** todo archivo subido queda disponible instantáneamente en el motor de búsqueda en una única transacción de base de datos.
+- **UX Optimizada:** soporte nativo de *Drag & Drop* y modal avanzado de confirmación de subida.
 
 ### 🔄 Indexación inteligente
 
@@ -58,6 +77,7 @@ El sistema cuenta actualmente con los siguientes módulos construidos y funciona
 
 - **Auditoría de búsqueda:** registra usuario, buscador, término buscado, motivo y cantidad de resultados.
 - **Auditoría de visualización:** registra usuario, buscador y documento exacto visualizado.
+- **Auditoría de carga:** registra usuario responsable, IP origen, archivo procesado y ruta física de destino.
 - **Logs del sistema:** registra eventos administrativos y operacionales como login, edición de usuarios, cambios de estado, creación de buscadores e indexación.
 
 ## 🛠️ Stack Tecnológico
@@ -77,7 +97,8 @@ RepositorioDocumental/
 ├── blueprints/          # Lógica de enrutamiento y controladores
 │   ├── admin.py         # Gestión de usuarios, buscadores y paneles de auditoría
 │   ├── auth.py          # Autenticación, reseteo y cambio de clave
-│   └── buscadores.py    # Motor de búsqueda y endpoint del visor seguro PDF
+│   ├── buscadores.py    # Motor de búsqueda y endpoint del visor seguro PDF
+│   └── carga.py         # Explorador de carga y subida de archivos (Upload API)
 ├── static/              # Archivos estáticos
 │   ├── css/             # Estilos personalizados (Tailwind base, style.css)
 │   ├── docs/            # Documentación
@@ -87,6 +108,7 @@ RepositorioDocumental/
 │   ├── admin/           # Formularios y tablas de gestión (CRUD) y logs
 │   ├── auth/            # Vistas de acceso y seguridad
 │   ├── buscadores/      # Menú dinámico y motor de búsqueda
+│   ├── carga/           # Interfaces de navegación y modal de subida (Drag & Drop)
 │   ├── errors/          # Páginas de error personalizadas (403, 404, 500)
 │   ├── _macros.html
 │   └── base.html
@@ -94,7 +116,7 @@ RepositorioDocumental/
 │   ├── __init__.py      # Exportación centralizada de utilidades
 │   ├── decorators.py    # Filtros de roles (Admin) y cambio de clave
 │   ├── email.py         # Lógica de envío de correos institucionales
-│   ├── helpers.py       # Funciones auxiliares (validaciones, hora local)
+│   ├── helpers.py       # Funciones auxiliares (IP proxied, validaciones, hora local)
 │   └── indexador.py     # Script core de escaneo e indexación física
 ├── venv/                # Entorno virtual
 ├── .env                 # Variables de entorno (Local)
@@ -223,7 +245,12 @@ Luego acceder desde el navegador a: `http://127.0.0.1:5000`
 
 * Hash seguro de contraseñas mediante Werkzeug
 * Protección CSRF en formularios POST gestionados por Flask-WTF
-* Validación de permisos antes de acceder a buscadores o visualizar documentos
+* Protección contra Path Traversal mediante pathlib para la manipulación de recursos de red.
+* Validación estricta de tamaño máximo de archivo.
+* Validación estricta de extensión permitida (.pdf) en carga documental.
+* Permisos granulares y matriciales mediante Association Object independientes para visualizar y cargar.
+* Validación de permisos antes de acceder a buscadores, directorios o visualizar documentos.
+* Obtención de IP real compatible con proxys reversos mediante cabeceras X-Forwarded-For y X-Real-IP.
 * Visor seguro que entrega archivos por ID interno en vez de exponer rutas físicas
 * Auditoría documental separada de logs administrativos
 * Reseteo de contraseña mediante token y expiración
@@ -237,22 +264,22 @@ Luego acceder desde el navegador a: `http://127.0.0.1:5000`
 * Retención de datos previos en formularios con errores de validación
 * Indicadores visuales de estado en tablas administrativas
 * Menús y vistas consistentes según permisos del usuario
+* Soporte Drag & Drop para carga múltiple de documentos.
+* Validación temprana de archivos antes de iniciar la subida.
+* Navegación progresiva de carpetas mediante AJAX.
 
 ## ⚠️ Consideraciones Operativas
 
 * El sistema depende de rutas de red accesibles, ya sea por UNC o mecanismos equivalentes disponibles en el servidor
-* El usuario o servicio que ejecute la aplicación debe tener permisos de lectura sobre las rutas configuradas
-* El proceso de indexación debe ejecutarse periódicamente para mantener consistencia entre la base de datos y el almacenamiento físico
+* El usuario o servicio que ejecute la aplicación debe tener permisos explícitos de lectura y escritura sobre las rutas UNC configuradas para permitir la carga y lectura de documentos
+* El proceso de indexación debe ejecutarse periódicamente para mantener consistencia entre la base de datos y el almacenamiento físico frente a modificaciones directas (no realizadas mediante la web)
 * La etapa de despliegue en servidor Windows aún no forma parte de este README y será documentada posteriormente
 
 ## 📋 Backlog / Pendientes
 
-* **Módulo de carga documental**: actualmente en standby, pendiente de definición funcional con usuarios reales y flujo de proceso
-* Definir si un mismo usuario podrá buscar y cargar desde una misma cuenta
-* Definir si carga y búsqueda vivirán en el mismo contexto o en módulos separados
-* Definir política de duplicados, nomenclatura, validación real de PDF, estrategia de indexación y auditoría de carga
 * Documentar despliegue productivo en servidor Windows
 * Documentar estrategia de ejecución con Waitress en fase posterior
+* Documentar estrategia de respaldo y recuperación
 ---
 Desarrollado por **Josting Silva**  
 Analista Programador – Unidad de TICs  
