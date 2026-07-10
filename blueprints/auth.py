@@ -149,7 +149,7 @@ def solicitar_reseteo():
         else:
             # No revelamos si el correo existe o no por seguridad, pero logueamos el intento
             registrar_log_sistema("Solicitud Reseteo Fallida", f"Email no existe: {email}")
-            flash(f'El correo electrónico no se encuentra registado en el sistema.', 'danger')
+            flash(f'El correo electrónico no se encuentra registrado en el sistema.', 'danger')
             
         return redirect(url_for('auth.login'))
         

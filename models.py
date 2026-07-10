@@ -140,7 +140,6 @@ class LogAuditoriaDocumental(db.Model):
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id', ondelete='SET NULL'), nullable=True)
     buscador_id = db.Column(db.Integer, db.ForeignKey('buscadores.id', ondelete='SET NULL'), nullable=True)
     
-    # ENUM ACTUALIZADO: Se agregó 'CARGA'
     tipo_evento = db.Column(db.Enum('BUSQUEDA', 'VISUALIZACION', 'CARGA', name='tipo_evento_enum'), nullable=False)
     
     termino_busqueda = db.Column(db.String(255), nullable=True)

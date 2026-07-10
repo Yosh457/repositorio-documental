@@ -61,14 +61,12 @@ def create_app():
     from blueprints.buscadores import buscadores_bp
     app.register_blueprint(buscadores_bp)
     
-    # NUEVO: Blueprint de Carga Documental
     from blueprints.carga import carga_bp
     app.register_blueprint(carga_bp)
 
     # Ruta raíz redirige al login
     @app.route('/')
     def index():
-        # Nota: Esto lanzará error hasta que creemos auth_bp, es el comportamiento esperado ahora
         return redirect(url_for('auth.login')) 
     
     # --- ERRORES Y CACHÉ ---
